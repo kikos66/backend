@@ -1,0 +1,93 @@
+package com.stary.backend.api.service;
+
+import com.stary.backend.api.model.EditRequest;
+import jakarta.transaction.Transactional;
+import com.stary.backend.api.model.LoginRequest;
+import com.stary.backend.api.model.RegisterRequest;
+import com.stary.backend.api.users.repositories.RefreshTokenRepository;
+import com.stary.backend.api.users.repositories.UserRepository;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Service;
+import com.stary.backend.api.users.*;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+import java.time.Instant;
+import java.util.Optional;
+import java.util.UUID;
+
+@Service
+public class UserService {
+    private final UserRepository userRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final TokenManager tokenManager;
+
+    public UserService(UserRepository userRepository, RefreshTokenRepository refreshTokenRepository,
+                       PasswordEncoder passwordEncoder, TokenManager tokenManager) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.refreshTokenRepository = refreshTokenRepository;
+        this.tokenManager = tokenManager;
+    }
+
+    @Transactional
+    public User registerNewUser(RegisterRequest request) {
+        if (userRepository.existsByUsername(request.getUsername())) {
+            throw new IllegalStateException("Username is already taken.");
+        }
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new IllegalStateException("Email is already registered.");
+        }
+
+        User user = new User();
+        user.setUsername(request.getUsername());
+        user.setEmail(request.getEmail());
+        String encodedPassword = passwordEncoder.encode(request.getPassword());
+        user.setPassword(encodedPassword);
+
+        System.out.println(user);
+        return userRepository.save(user);
+    }
+
+    public User authenticate(LoginRequest req) {
+        User user = userRepository.findByEmail(req.getEmail())
+                .orElseThrow(() -> new IllegalStateException("Invalid username/password"));
+        if (!passwordEncoder.matches(req.getPassword(), user.getPassword())) {
+            throw new IllegalStateException("Invalid username/password");
+        }
+        return user;
+    }
+
+    public RefreshToken createRefreshToken(User user) {
+        RefreshToken rt = new RefreshToken();
+        rt.setUser(user);
+        rt.setToken(UUID.randomUUID().toString());
+        rt.setExpiryDate(Instant.now().plusMillis(tokenManager.getJwtRefreshExpirationMs()));
+        return refreshTokenRepository.save(rt);
+    }
+
+    public void edit(String email, EditRequest req) {
+        Optional<User> u = userRepository.findByEmail(email);
+        if (u.isPresent()) {
+            if (userRepository.findByEmail(req.getEmail()).isEmpty()) {
+                userRepository.findByEmail(email).get().setEmail(req.getEmail());
+                System.out.println(req.getEmail());
+            } else {
+                throw new BadCredentialsException("Email is already in use.");
+            }
+        }
+    }
+
+    public RefreshToken findByToken(String token) {
+        return refreshTokenRepository.findByToken(token).orElse(null);
+    }
+
+    public void deleteRefreshToken(RefreshToken token) {
+        refreshTokenRepository.delete(token);
+    }
+
+    public void deleteRefreshTokensForUser(User user) {
+        refreshTokenRepository.deleteByUser(user);
+    }
+}

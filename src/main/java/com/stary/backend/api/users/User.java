@@ -1,4 +1,4 @@
-package com.stary.backend;
+package com.stary.backend.api.users;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
@@ -31,5 +31,6 @@ public class User {
 
     @Column(nullable = false)
     @NotBlank
+    @Size(min = 8)
     private String password;
 }
