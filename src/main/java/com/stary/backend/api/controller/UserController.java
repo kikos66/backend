@@ -58,7 +58,13 @@ public class UserController {
 
         Long userId = user.getId();
 
-        userService.edit(userId, req);
+        Map<String, Object> response = new HashMap<>();
+        if(!userService.edit(userId, req)) {
+            response.put("status", "500");
+            response.put("message", "Couldn't edit user.");
+            return ResponseEntity.ok(response);
+        }
+
 
         User updatedUser = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Updated user not found."));
@@ -75,7 +81,7 @@ public class UserController {
         cookie.setSecure(false);
         res.addCookie(cookie);
 
-        Map<String, Object> response = new HashMap<>();
+        response.put("status", "201");
         response.put("message", "Successfully edited and session refreshed.");
         response.put("accessToken", newAccessToken);
         response.put("user", updatedUser);
@@ -83,4 +89,21 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/delete")
+    public ResponseEntity<?> deleteUser(HttpServletResponse res) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found."));
+
+        Long userId = user.getId();
+        Map<String, Object> response = new HashMap<>();
+
+        if (userService.deleteUser(userId))
+            response.put("status", "201");
+        else
+            response.put("status", "500");
+        return ResponseEntity.ok(response);
+    }
 }

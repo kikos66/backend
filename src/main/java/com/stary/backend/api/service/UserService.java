@@ -39,7 +39,6 @@ public class UserService {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new IllegalStateException("Email is already registered.");
         }
-
         User user = new User();
         user.setUsername(request.getUsername());
         user.setEmail(request.getEmail());
@@ -61,23 +60,42 @@ public class UserService {
 
     public RefreshToken createRefreshToken(User user) {
         RefreshToken rt = new RefreshToken();
+        refreshTokenRepository.deleteByUser(user);
         rt.setUser(user);
         rt.setToken(UUID.randomUUID().toString());
         rt.setExpiryDate(Instant.now().plusMillis(tokenManager.getJwtRefreshExpirationMs()));
         return refreshTokenRepository.save(rt);
     }
 
-    public void edit(Long id, EditRequest req) {
+    public boolean edit(Long id, EditRequest req) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found."));
 
         if (!user.getEmail().equals(req.getEmail())) {
             if (userRepository.findByEmail(req.getEmail()).isPresent()) {
-                throw new BadCredentialsException("Email is already in use.");
+                //throw new BadCredentialsException("Email is already in use.");
+                return false;
             }
             user.setEmail(req.getEmail());
+        } else {
+            return false;
         }
         userRepository.save(user);
+        return true;
+    }
+
+    @Transactional
+    public boolean deleteUser(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found."));
+
+        if(user == null)
+            return false;
+
+        deleteRefreshTokensForUser(user);
+        userRepository.delete(user);
+
+        return true;
     }
 
     public RefreshToken findByToken(String token) {
