@@ -67,16 +67,17 @@ public class UserService {
         return refreshTokenRepository.save(rt);
     }
 
-    public void edit(String email, EditRequest req) {
-        Optional<User> u = userRepository.findByEmail(email);
-        if (u.isPresent()) {
-            if (userRepository.findByEmail(req.getEmail()).isEmpty()) {
-                userRepository.findByEmail(email).get().setEmail(req.getEmail());
-                System.out.println(req.getEmail());
-            } else {
+    public void edit(Long id, EditRequest req) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found."));
+
+        if (!user.getEmail().equals(req.getEmail())) {
+            if (userRepository.findByEmail(req.getEmail()).isPresent()) {
                 throw new BadCredentialsException("Email is already in use.");
             }
+            user.setEmail(req.getEmail());
         }
+        userRepository.save(user);
     }
 
     public RefreshToken findByToken(String token) {
