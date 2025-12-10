@@ -60,7 +60,7 @@ public class UserService {
 
     public RefreshToken createRefreshToken(User user) {
         RefreshToken rt = new RefreshToken();
-        refreshTokenRepository.deleteByUser(user);
+        //refreshTokenRepository.deleteByUser(user);
         rt.setUser(user);
         rt.setToken(UUID.randomUUID().toString());
         rt.setExpiryDate(Instant.now().plusMillis(tokenManager.getJwtRefreshExpirationMs()));

@@ -44,11 +44,10 @@ public class SecurityConfig {
                                 "/api/auth/register",
                                 "/api/auth/login",
                                 "/api/auth/logout",
-                                "/api/auth/refresh",
-                                "/api/users/{id}"// <--- IMPORTANT: Refresh must be accessible!
+                                "/api/auth/refresh"
                         ).permitAll()
                         .requestMatchers("/api/users/**").authenticated()
-
+                        .requestMatchers("/api/users/{id}").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtaf, UsernamePasswordAuthenticationFilter.class);
