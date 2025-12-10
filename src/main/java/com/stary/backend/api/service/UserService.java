@@ -15,6 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 @Service
 public class UserService {
@@ -22,6 +23,9 @@ public class UserService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final TokenManager tokenManager;
+    private static final String EMAIL_REGEX =
+            "^[a-zA-Z0-9+&-]+(?:.[a-zA-Z0-9_+&-]+)*@(?:[a-zA-Z0-9-]+.)+[a-zA-Z]{2,7}$";
+    private static final Pattern PATTERN = Pattern.compile(EMAIL_REGEX);
 
     public UserService(UserRepository userRepository, RefreshTokenRepository refreshTokenRepository,
                        PasswordEncoder passwordEncoder, TokenManager tokenManager) {
@@ -38,6 +42,9 @@ public class UserService {
         }
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new IllegalStateException("Email is already registered.");
+        }
+        if(!PATTERN.matcher(request.getEmail()).matches()) {
+            throw new IllegalStateException("Email is invalid.");
         }
         User user = new User();
         user.setUsername(request.getUsername());
