@@ -46,8 +46,12 @@ public class SecurityConfig {
                                 "/api/auth/logout",
                                 "/api/auth/refresh"
                         ).permitAll()
+                        // Publicly allow listing products and product details
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/products/**").permitAll()
+                        // Allow public GET /api/users/{id}
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/users/*").permitAll()
+                        // Users endpoints (PUT /api/users/edit, POST /api/users/delete) require auth
                         .requestMatchers("/api/users/**").authenticated()
-                        .requestMatchers("/api/users/{id}").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtaf, UsernamePasswordAuthenticationFilter.class);

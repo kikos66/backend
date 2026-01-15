@@ -100,7 +100,7 @@ public class AuthController {
         Cookie[] cookies = request.getCookies();
         if (cookies != null) {
             for (Cookie c : cookies) {
-                if ("refreshToken".equals(c.getAttribute("email"))) {
+                if ("refreshToken".equals(c.getName())) {
                     String token = c.getValue();
                     RefreshToken rt = userService.findByToken(token);
                     if (rt != null) userService.deleteRefreshToken(rt);
