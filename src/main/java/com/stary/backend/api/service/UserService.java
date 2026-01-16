@@ -6,14 +6,19 @@ import com.stary.backend.api.model.LoginRequest;
 import com.stary.backend.api.model.RegisterRequest;
 import com.stary.backend.api.users.repositories.RefreshTokenRepository;
 import com.stary.backend.api.users.repositories.UserRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import com.stary.backend.api.users.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.*;
 import java.time.Instant;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -26,13 +31,17 @@ public class UserService {
     private static final String EMAIL_REGEX =
             "^[a-zA-Z0-9+&-]+(?:.[a-zA-Z0-9_+&-]+)*@(?:[a-zA-Z0-9-]+.)+[a-zA-Z]{2,7}$";
     private static final Pattern PATTERN = Pattern.compile(EMAIL_REGEX);
+    private final Path rootUploadPath;
 
     public UserService(UserRepository userRepository, RefreshTokenRepository refreshTokenRepository,
-                       PasswordEncoder passwordEncoder, TokenManager tokenManager) {
+                       PasswordEncoder passwordEncoder, TokenManager tokenManager, @Value("${file.upload-dir}") String uploadDir) throws IOException {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.refreshTokenRepository = refreshTokenRepository;
         this.tokenManager = tokenManager;
+
+        this.rootUploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
+        Files.createDirectories(rootUploadPath.resolve("profiles"));
     }
 
     @Transactional
@@ -115,5 +124,24 @@ public class UserService {
 
     public void deleteRefreshTokensForUser(User user) {
         refreshTokenRepository.deleteByUser(user);
+    }
+
+    public String storeProfileFile(MultipartFile file, String previousFilename) throws IOException {
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("File is empty");
+        }
+
+        String filename = UUID.randomUUID() + "_" + file.getOriginalFilename();
+        Path target = rootUploadPath.resolve(filename);
+
+        Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
+
+        // delete old avatar
+        if (previousFilename != null && !previousFilename.isBlank()) {
+            Path old = rootUploadPath.resolve(previousFilename);
+            Files.deleteIfExists(old);
+        }
+
+        return filename;
     }
 }

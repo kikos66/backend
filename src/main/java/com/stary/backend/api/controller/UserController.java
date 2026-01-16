@@ -5,6 +5,7 @@ import com.stary.backend.api.service.UserService;
 import com.stary.backend.api.users.User;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -13,7 +14,12 @@ import org.springframework.web.bind.annotation.*;
 import com.stary.backend.api.users.repositories.UserRepository;
 import com.stary.backend.api.users.TokenManager;
 import com.stary.backend.api.users.RefreshToken;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -105,5 +111,36 @@ public class UserController {
         else
             response.put("status", "500");
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping(value = "/users/me/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> uploadAvatar(@RequestPart MultipartFile avatar) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String email = auth.getName();
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        try {
+            String filename = userService.storeProfileFile(
+                    avatar,
+                    user.getProfilePicture()
+            );
+
+            user.setProfilePicture(filename);
+            userRepository.save(user);
+
+            Map<String, Object> resp = new HashMap<>();
+            resp.put("profilePictureUrl", "/images/profiles/" + filename);
+            resp.put("user", user);
+            resp.put("status", "201");
+
+            return ResponseEntity.ok(resp);
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Failed to upload avatar");
+        }
     }
 }

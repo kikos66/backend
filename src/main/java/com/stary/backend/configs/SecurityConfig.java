@@ -3,6 +3,7 @@ package com.stary.backend.configs;
 import com.stary.backend.api.security.JwtAuthenticationFilter;
 import com.stary.backend.api.service.MSUserDetailService;
 import com.stary.backend.api.users.TokenManager;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -46,6 +47,7 @@ public class SecurityConfig {
                                 "/api/auth/logout",
                                 "/api/auth/refresh"
                         ).permitAll()
+                        .requestMatchers("/images/**").permitAll()
                         // Publicly allow listing products and product details
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/products/**").permitAll()
                         // Allow public GET /api/users/{id}

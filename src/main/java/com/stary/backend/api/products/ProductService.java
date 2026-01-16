@@ -1,29 +1,98 @@
 package com.stary.backend.api.products;
 
+import com.stary.backend.api.products.repositories.ProductImageRepository;
 import com.stary.backend.api.products.repositories.ProductRepository;
+import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
+import jakarta.transaction.Transactional;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.*;
+import java.util.*;
 
 @Service
 public class ProductService {
-    private final ProductRepository repo;
-    public ProductService(ProductRepository repo) { this.repo = repo; }
+    private final ProductRepository productRepository;
+    private final ProductImageRepository imageRepository;
 
-    public List<Product> list(String search, String category, String condition, Double minPrice, Double maxPrice) {
-        return repo.searchFiltered(
-                (search == null || search.isBlank()) ? null : search,
-                (category == null || category.isBlank()) ? null : category,
-                (condition == null || condition.isBlank()) ? null : condition,
-                minPrice, maxPrice);
+    private final Path rootUploadPath;
+
+    private static final Set<String> ALLOWED = Set.of("image/png","image/jpeg","image/webp");
+    private static final long MAX_BYTES = 5L * 1024 * 1024; // 5 MB
+    private static final int MAX_IMAGES_PER_PRODUCT = 5;
+
+    public ProductService(ProductRepository productRepository,
+                          ProductImageRepository imageRepository,
+                          @Value("${file.upload-dir}") String uploadDir) throws IOException {
+        this.productRepository = productRepository;
+        this.imageRepository = imageRepository;
+        this.rootUploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
+        Files.createDirectories(rootUploadPath.resolve("products"));
+        Files.createDirectories(rootUploadPath.resolve("profiles"));
     }
 
-    public Product create(Product p) {
-        // optionally validate fields
-        return repo.save(p);
+    @Transactional
+    public Product createProduct(Product p, MultipartFile[] images) throws IOException {
+        Product saved = productRepository.save(p);
+        if (images != null && images.length > 0) {
+            saveImagesForProduct(saved, images);
+        }
+        return saved;
     }
 
-    public Product get(Long id) {
-        return repo.findById(id).orElse(null);
+    @Transactional
+    public void saveImagesForProduct(Product product, MultipartFile[] images) throws IOException {
+        List<ProductImage> current = imageRepository.findByProductId(product.getId());
+        int existing = current.size();
+        if (existing + images.length > MAX_IMAGES_PER_PRODUCT) {
+            throw new IllegalArgumentException("Exceeds max images per product");
+        }
+
+        for (MultipartFile file : images) {
+            validateImage(file);
+            String newName = storeProductFile(file);
+            ProductImage img = new ProductImage();
+            img.setFilename(newName);
+            img.setContentType(file.getContentType());
+            img.setProduct(product);
+            imageRepository.save(img);
+            product.getImages().add(img);
+        }
+        productRepository.save(product);
+    }
+
+    private void validateImage(MultipartFile file) {
+        if (file.getSize() <= 0) throw new IllegalArgumentException("Empty file");
+        if (file.getSize() > MAX_BYTES) throw new IllegalArgumentException("File too large (>5MB)");
+        if (!ALLOWED.contains(file.getContentType())) throw new IllegalArgumentException("Invalid image type");
+    }
+
+    private String storeProductFile(MultipartFile file) throws IOException {
+        String ext = Optional.ofNullable(file.getOriginalFilename())
+                .filter(n -> n.contains("."))
+                .map(n -> n.substring(n.lastIndexOf('.')))
+                .orElse("");
+        String name = UUID.randomUUID().toString() + ext;
+        Path target = rootUploadPath.resolve("products").resolve(name);
+        Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
+        return name;
+    }
+
+    public Optional<Product> findById(Long id) {
+        return productRepository.findById(id);
+    }
+
+    public List<Product> findAll() {
+        return productRepository.findAll();
+    }
+
+    @PostConstruct
+    public void debugFileAccess() {
+        Path test = Paths.get("uploads/products").toAbsolutePath();
+        System.out.println(">>> Upload folder exists: " + Files.exists(test));
+        System.out.println(">>> Upload folder readable: " + Files.isReadable(test));
     }
 }

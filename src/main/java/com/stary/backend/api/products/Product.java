@@ -1,9 +1,13 @@
 package com.stary.backend.api.products;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "products")
@@ -28,5 +32,7 @@ public class Product {
     @Column(name = "product_condition")
     private String condition; // new | used | refurbished
 
-    // You can add image URL, quantity, createdBy, etc.
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JsonManagedReference
+    private List<ProductImage> images = new ArrayList<>();
 }

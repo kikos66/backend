@@ -33,4 +33,7 @@ public class User {
     @NotBlank
     @Size(min = 8)
     private String password;
+
+    @Column(name = "profile_picture")
+    private String profilePicture;
 }
