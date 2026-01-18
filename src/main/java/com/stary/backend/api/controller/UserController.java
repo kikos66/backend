@@ -113,7 +113,7 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping(value = "/users/me/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/me/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> uploadAvatar(@RequestPart MultipartFile avatar) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String email = auth.getName();

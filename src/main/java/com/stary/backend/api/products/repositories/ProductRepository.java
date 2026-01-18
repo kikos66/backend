@@ -1,9 +1,11 @@
 package com.stary.backend.api.products.repositories;
 
 import com.stary.backend.api.products.Product;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+
 import java.util.List;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
@@ -20,4 +22,10 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                                  @Param("condition") String condition,
                                  @Param("minPrice") Double minPrice,
                                  @Param("maxPrice") Double maxPrice);
+    @Query("""
+        SELECT p FROM Product p
+        WHERE LOWER(p.name) LIKE LOWER(CONCAT('%', :q, '%'))
+        ORDER BY p.name ASC
+    """)
+    List<Product> suggest(@Param("q") String q, Pageable pageable);
 }

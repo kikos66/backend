@@ -4,6 +4,7 @@ import com.stary.backend.api.products.repositories.ProductImageRepository;
 import com.stary.backend.api.products.repositories.ProductRepository;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -94,5 +95,30 @@ public class ProductService {
         Path test = Paths.get("uploads/products").toAbsolutePath();
         System.out.println(">>> Upload folder exists: " + Files.exists(test));
         System.out.println(">>> Upload folder readable: " + Files.isReadable(test));
+    }
+
+    public List<Product> searchFiltered(
+            String search,
+            String category,
+            String condition,
+            Double minPrice,
+            Double maxPrice
+    ) {
+        // normalize empty strings → null
+        search = (search == null || search.isBlank()) ? null : search;
+        category = (category == null || category.isBlank()) ? null : category;
+        condition = (condition == null || condition.isBlank()) ? null : condition;
+
+        return productRepository.searchFiltered(
+                search,
+                category,
+                condition,
+                minPrice,
+                maxPrice
+        );
+    }
+
+    public List<Product> suggest(String q) {
+        return productRepository.suggest(q, PageRequest.of(0, 5));
     }
 }

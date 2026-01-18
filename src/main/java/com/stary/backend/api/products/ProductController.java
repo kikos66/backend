@@ -67,7 +67,23 @@ public class ProductController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Product>> getAll() {
-        return ResponseEntity.ok(svc.findAll());
+    public ResponseEntity<List<Product>> getAll(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String condition,
+            @RequestParam(required = false) Double minPrice,
+            @RequestParam(required = false) Double maxPrice
+    ) {
+        return ResponseEntity.ok(
+                svc.searchFiltered(search, category, condition, minPrice, maxPrice)
+        );
+    }
+
+    @GetMapping("/suggest")
+    public List<Product> suggest(@RequestParam String q) {
+        if (q == null || q.trim().length() < 2) {
+            return List.of();
+        }
+        return svc.suggest(q);
     }
 }

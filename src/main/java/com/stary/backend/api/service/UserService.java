@@ -126,20 +126,24 @@ public class UserService {
         refreshTokenRepository.deleteByUser(user);
     }
 
-    public String storeProfileFile(MultipartFile file, String previousFilename) throws IOException {
-        if (file.isEmpty()) {
-            throw new IllegalArgumentException("File is empty");
-        }
+    public String storeProfileFile(MultipartFile file, String oldFilename) throws IOException {
 
-        String filename = UUID.randomUUID() + "_" + file.getOriginalFilename();
-        Path target = rootUploadPath.resolve(filename);
+        Path profilesDir = rootUploadPath.resolve("profiles");
+        Files.createDirectories(profilesDir);
+
+        String ext = Optional.ofNullable(file.getOriginalFilename())
+                .filter(n -> n.contains("."))
+                .map(n -> n.substring(n.lastIndexOf('.')))
+                .orElse("");
+
+        String filename = UUID.randomUUID() + ext;
+        Path target = profilesDir.resolve(filename);
 
         Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
 
         // delete old avatar
-        if (previousFilename != null && !previousFilename.isBlank()) {
-            Path old = rootUploadPath.resolve(previousFilename);
-            Files.deleteIfExists(old);
+        if (oldFilename != null) {
+            Files.deleteIfExists(profilesDir.resolve(oldFilename));
         }
 
         return filename;
