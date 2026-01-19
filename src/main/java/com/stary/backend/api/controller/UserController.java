@@ -132,6 +132,7 @@ public class UserController {
             userRepository.save(user);
 
             Map<String, Object> resp = new HashMap<>();
+            resp.put("filename", filename);
             resp.put("profilePictureUrl", "/images/profiles/" + filename);
             resp.put("user", user);
             resp.put("status", "201");
