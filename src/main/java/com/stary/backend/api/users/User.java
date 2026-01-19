@@ -1,5 +1,6 @@
 package com.stary.backend.api.users;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.Getter;
@@ -32,6 +33,7 @@ public class User {
     @Column(nullable = false)
     @NotBlank
     @Size(min = 8)
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 
     @Column(name = "profile_picture")

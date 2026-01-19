@@ -1,6 +1,9 @@
 package com.stary.backend.api.service;
 
 import com.stary.backend.api.model.EditRequest;
+import com.stary.backend.api.products.Product;
+import com.stary.backend.api.products.ProductImage;
+import com.stary.backend.api.products.repositories.ProductRepository;
 import jakarta.transaction.Transactional;
 import com.stary.backend.api.model.LoginRequest;
 import com.stary.backend.api.model.RegisterRequest;
@@ -17,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.file.*;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -32,9 +36,10 @@ public class UserService {
             "^[a-zA-Z0-9+&-]+(?:.[a-zA-Z0-9_+&-]+)*@(?:[a-zA-Z0-9-]+.)+[a-zA-Z]{2,7}$";
     private static final Pattern PATTERN = Pattern.compile(EMAIL_REGEX);
     private final Path rootUploadPath;
+    private final ProductRepository productRepository;
 
     public UserService(UserRepository userRepository, RefreshTokenRepository refreshTokenRepository,
-                       PasswordEncoder passwordEncoder, TokenManager tokenManager, @Value("${file.upload-dir}") String uploadDir) throws IOException {
+                       PasswordEncoder passwordEncoder, TokenManager tokenManager, @Value("${file.upload-dir}") String uploadDir, ProductRepository productRepository) throws IOException {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.refreshTokenRepository = refreshTokenRepository;
@@ -42,6 +47,7 @@ public class UserService {
 
         this.rootUploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
         Files.createDirectories(rootUploadPath.resolve("profiles"));
+        this.productRepository = productRepository;
     }
 
     @Transactional
@@ -100,17 +106,45 @@ public class UserService {
         return true;
     }
 
+    public void deleteProfileFile(User user) {
+        if (user.getProfilePicture() != null) {
+            Path profilesDir = rootUploadPath.resolve("profiles");
+            try {
+                Files.deleteIfExists(profilesDir.resolve(user.getProfilePicture()));
+            } catch (Exception e) {
+                System.err.println("Failed to delete profile picture: " + user.getProfilePicture());
+            }
+        }
+    }
+
+    public void deleteProductFiles(Product product) {
+        Path productsDir = rootUploadPath.resolve("products");
+        if (product.getImages() != null) {
+            for (ProductImage img : product.getImages()) {
+                try {
+                    Path file = productsDir.resolve(img.getFilename());
+                    Files.deleteIfExists(file);
+                } catch (Exception e) {
+                    System.err.println("Failed to delete file: " + img.getFilename());
+                }
+            }
+        }
+    }
+
     @Transactional
     public boolean deleteUser(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found."));
 
-        if(user == null)
-            return false;
+        List<Product> products = productRepository.findByOwnerId(user.getId());
+        for (Product product : products) {
+            deleteProductFiles(product);
+        }
+        productRepository.deleteAll(products);
 
+        deleteProfileFile(user);
         deleteRefreshTokensForUser(user);
         userRepository.delete(user);
-
         return true;
     }
 

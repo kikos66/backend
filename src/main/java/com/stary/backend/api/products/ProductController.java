@@ -55,6 +55,7 @@ public class ProductController {
     public ResponseEntity<?> addImages(@PathVariable Long id, @RequestPart MultipartFile[] images) {
         try {
             Product p = svc.findById(id).orElseThrow();
+            svc.assertOwner(p);
             svc.saveImagesForProduct(p, images);
             return ResponseEntity.ok(p);
         } catch (NoSuchElementException ex) {
@@ -85,5 +86,22 @@ public class ProductController {
             return List.of();
         }
         return svc.suggest(q);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> delete(@PathVariable Long id) {
+        try {
+            svc.deleteProduct(id);
+            return ResponseEntity.noContent().build();
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body("Forbidden");
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @GetMapping("/mine")
+    public ResponseEntity<List<Product>> myProducts() {
+        return ResponseEntity.ok(svc.findMine());
     }
 }

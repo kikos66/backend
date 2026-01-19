@@ -2,9 +2,13 @@ package com.stary.backend.api.products;
 
 import com.stary.backend.api.products.repositories.ProductImageRepository;
 import com.stary.backend.api.products.repositories.ProductRepository;
+import com.stary.backend.api.users.User;
+import com.stary.backend.api.users.repositories.UserRepository;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -18,7 +22,7 @@ import java.util.*;
 public class ProductService {
     private final ProductRepository productRepository;
     private final ProductImageRepository imageRepository;
-
+    private final UserRepository userRepository;
     private final Path rootUploadPath;
 
     private static final Set<String> ALLOWED = Set.of("image/png","image/jpeg","image/webp");
@@ -27,9 +31,11 @@ public class ProductService {
 
     public ProductService(ProductRepository productRepository,
                           ProductImageRepository imageRepository,
+                          UserRepository userRepository,
                           @Value("${file.upload-dir}") String uploadDir) throws IOException {
         this.productRepository = productRepository;
         this.imageRepository = imageRepository;
+        this.userRepository = userRepository;
         this.rootUploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
         Files.createDirectories(rootUploadPath.resolve("products"));
         Files.createDirectories(rootUploadPath.resolve("profiles"));
@@ -37,6 +43,15 @@ public class ProductService {
 
     @Transactional
     public Product createProduct(Product p, MultipartFile[] images) throws IOException {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || auth.getName() == null) {
+            throw new IllegalStateException("Unauthenticated create not allowed");
+        }
+        String email = auth.getName();
+        User owner = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
+        p.setOwner(owner);
+
         Product saved = productRepository.save(p);
         if (images != null && images.length > 0) {
             saveImagesForProduct(saved, images);
@@ -104,7 +119,11 @@ public class ProductService {
             Double minPrice,
             Double maxPrice
     ) {
-        // normalize empty strings → null
+        Long ownerId = null;
+        try {
+            ownerId = getAuthenticatedUser().getId();
+        } catch (Exception ignored) {}
+
         search = (search == null || search.isBlank()) ? null : search;
         category = (category == null || category.isBlank()) ? null : category;
         condition = (condition == null || condition.isBlank()) ? null : condition;
@@ -114,11 +133,58 @@ public class ProductService {
                 category,
                 condition,
                 minPrice,
-                maxPrice
+                maxPrice,
+                ownerId
         );
     }
 
     public List<Product> suggest(String q) {
         return productRepository.suggest(q, PageRequest.of(0, 5));
+    }
+
+    private User getAuthenticatedUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || auth.getName() == null) {
+            throw new IllegalStateException("Unauthenticated");
+        }
+        return userRepository.findByEmail(auth.getName())
+                .orElseThrow(() -> new IllegalStateException("User not found"));
+    }
+
+    @Transactional
+    public void deleteProduct(Long productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new NoSuchElementException("Product not found"));
+
+        User current = getAuthenticatedUser();
+        if (!product.getOwner().getId().equals(current.getId())) {
+            throw new SecurityException("Not owner of this product");
+        }
+
+        Path productsDir = rootUploadPath.resolve("products");
+        if (product.getImages() != null) {
+            for (var img : product.getImages()) {
+                try {
+                    Path file = productsDir.resolve(img.getFilename());
+                    Files.deleteIfExists(file);
+                } catch (Exception e) {
+                    System.err.println("Failed to delete file: " + img.getFilename());
+                }
+            }
+        }
+
+        productRepository.delete(product);
+    }
+
+    public void assertOwner(Product product) {
+        User current = getAuthenticatedUser();
+        if (!product.getOwner().getId().equals(current.getId())) {
+            throw new SecurityException("Not owner");
+        }
+    }
+
+    public List<Product> findMine() {
+        User user = getAuthenticatedUser();
+        return productRepository.findByOwnerId(user.getId());
     }
 }

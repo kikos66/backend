@@ -105,6 +105,7 @@ public class UserController {
 
         Long userId = user.getId();
         Map<String, Object> response = new HashMap<>();
+        System.out.println("Authentication object: " + authentication);
 
         if (userService.deleteUser(userId))
             response.put("status", "201");

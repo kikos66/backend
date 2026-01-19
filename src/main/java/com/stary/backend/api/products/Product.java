@@ -1,6 +1,8 @@
 package com.stary.backend.api.products;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.stary.backend.api.users.User;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -35,4 +37,9 @@ public class Product {
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JsonManagedReference
     private List<ProductImage> images = new ArrayList<>();
+
+    @ManyToOne(fetch = FetchType.EAGER) // EAGER so owner is serialized safely
+    @JoinColumn(name = "owner_id")
+    @JsonIgnoreProperties({"password"}) // avoid sending password if any (safety)
+    private User owner;
 }
