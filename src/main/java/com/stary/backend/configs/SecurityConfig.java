@@ -17,8 +17,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-@Configuration
 @EnableMethodSecurity
+@Configuration
 public class SecurityConfig {
 
     private final TokenManager tokenManager;
@@ -37,24 +37,17 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         JwtAuthenticationFilter jwtaf = new JwtAuthenticationFilter(tokenManager, userDetailService);
-
+        System.out.println("=== SECURITY CONFIG LOADED ===");
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/api/auth/register",
-                                "/api/auth/login",
-                                "/api/auth/logout",
-                                "/api/auth/refresh"
-                        ).permitAll()
+                        .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/images/**").permitAll()
-                        // Publicly allow listing products and product details
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/products/**").permitAll()
-                        // Allow public GET /api/users/{id}
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/users/*").permitAll()
-                        // Users endpoints (PUT /api/users/edit, POST /api/users/delete) require auth
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/users/**").authenticated()
                         .anyRequest().authenticated()
                 )

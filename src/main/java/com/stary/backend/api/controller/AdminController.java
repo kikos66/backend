@@ -5,6 +5,7 @@ import com.stary.backend.api.users.User;
 import com.stary.backend.api.users.repositories.UserRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
@@ -28,5 +29,11 @@ public class AdminController {
         user.setRole(role);
         userRepository.save(user);
         return ResponseEntity.ok(user);
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/users")
+    public ResponseEntity<?> getAllUsers() {
+        return ResponseEntity.ok(userRepository.findAll());
     }
 }

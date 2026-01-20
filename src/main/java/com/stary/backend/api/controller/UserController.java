@@ -41,6 +41,10 @@ public class UserController {
     @GetMapping("/me")
     public User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        System.out.println("AUTH NAME: " + authentication.getName());
+        System.out.println("AUTHORITIES: " + authentication.getAuthorities());
+
         String email = authentication.getName(); // The 'name' is the email from UserDetails
         System.out.println(email);
         return userRepository.findByEmail(email)

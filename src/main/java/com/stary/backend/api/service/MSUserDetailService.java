@@ -21,7 +21,7 @@ public class MSUserDetailService implements UserDetailsService {
         return org.springframework.security.core.userdetails.User
                 .withUsername(user.getEmail())
                 .password(user.getPassword())
-                .authorities("USER")
+                .authorities(user.getRole().name())
                 .build();
     }
 }
