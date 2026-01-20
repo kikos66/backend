@@ -1,5 +1,6 @@
-package com.stary.backend.api.products;
+package com.stary.backend.api.comments;
 
+import com.stary.backend.api.products.Product;
 import com.stary.backend.api.users.User;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -19,14 +20,14 @@ public class Comment {
     private Long id;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "user_id")
-    private User user;
+    @JoinColumn(name = "author_id", nullable = false)
+    private User author;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "product_id")
+    @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "TEXT", nullable = false)
     private String content;
 
     private Instant createdAt = Instant.now();

@@ -66,6 +66,7 @@ public class UserService {
         user.setEmail(request.getEmail());
         String encodedPassword = passwordEncoder.encode(request.getPassword());
         user.setPassword(encodedPassword);
+        user.setRole(Role.ROLE_USER);
 
         System.out.println(user);
         return userRepository.save(user);
@@ -139,8 +140,8 @@ public class UserService {
         List<Product> products = productRepository.findByOwnerId(user.getId());
         for (Product product : products) {
             deleteProductFiles(product);
+            productRepository.delete(product);
         }
-        productRepository.deleteAll(products);
 
         deleteProfileFile(user);
         deleteRefreshTokensForUser(user);

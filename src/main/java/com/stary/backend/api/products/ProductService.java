@@ -4,6 +4,7 @@ import com.stary.backend.api.products.repositories.ProductImageRepository;
 import com.stary.backend.api.products.repositories.ProductRepository;
 import com.stary.backend.api.users.User;
 import com.stary.backend.api.users.repositories.UserRepository;
+import com.stary.backend.api.users.Role;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
@@ -13,7 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.transaction.Transactional;
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.*;
@@ -157,7 +157,8 @@ public class ProductService {
                 .orElseThrow(() -> new NoSuchElementException("Product not found"));
 
         User current = getAuthenticatedUser();
-        if (!product.getOwner().getId().equals(current.getId())) {
+        if (!product.getOwner().getId().equals(current.getId()) &&
+                current.getRole() != Role.ROLE_ADMIN && current.getRole() != Role.ROLE_MODERATOR) {
             throw new SecurityException("Not owner of this product");
         }
 
