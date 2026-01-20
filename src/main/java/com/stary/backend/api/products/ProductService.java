@@ -7,6 +7,7 @@ import com.stary.backend.api.users.repositories.UserRepository;
 import com.stary.backend.api.users.Role;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -135,6 +136,29 @@ public class ProductService {
                 minPrice,
                 maxPrice,
                 ownerId
+        );
+    }
+
+    public Page<Product> searchFilteredPaged(
+            String search,
+            String category,
+            String condition,
+            Double minPrice,
+            Double maxPrice,
+            int page,
+            int size
+    ) {
+        search = (search == null || search.isBlank()) ? null : search;
+        category = (category == null || category.isBlank()) ? null : category;
+        condition = (condition == null || condition.isBlank()) ? null : condition;
+
+        return productRepository.searchFilteredPaged(
+                search,
+                category,
+                condition,
+                minPrice,
+                maxPrice,
+                PageRequest.of(page, size)
         );
     }
 

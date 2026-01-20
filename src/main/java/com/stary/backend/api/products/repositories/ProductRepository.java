@@ -3,6 +3,7 @@ package com.stary.backend.api.products.repositories;
 import com.stary.backend.api.products.Product;
 import com.stary.backend.api.users.User;
 import jakarta.transaction.Transactional;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -38,6 +39,24 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             String category,
             String condition,
             Long excludeOwnerId
+    );
+
+    @Query("""
+        SELECT p FROM Product p
+        WHERE (:search IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%',:search,'%')) 
+               OR LOWER(p.description) LIKE LOWER(CONCAT('%',:search,'%')))
+        AND (:category IS NULL OR p.category = :category)
+        AND (:condition IS NULL OR p.condition = :condition)
+        AND (:minPrice IS NULL OR p.price >= :minPrice)
+        AND (:maxPrice IS NULL OR p.price <= :maxPrice)
+    """)
+    Page<Product> searchFilteredPaged(
+            String search,
+            String category,
+            String condition,
+            Double minPrice,
+            Double maxPrice,
+            Pageable pageable
     );
 
     List<Product> findByOwnerId(Long ownerId);

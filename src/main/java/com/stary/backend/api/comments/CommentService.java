@@ -4,6 +4,8 @@ import com.stary.backend.api.products.Product;
 import com.stary.backend.api.products.ProductService;
 import com.stary.backend.api.users.User;
 import com.stary.backend.api.users.repositories.UserRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -25,6 +27,13 @@ public class CommentService {
 
     public List<Comment> listForProduct(Long productId) {
         return repo.findByProductIdOrderByCreatedAtAsc(productId);
+    }
+
+    public Page<Comment> listForProductPaged(Long productId, int page, int size) {
+        return repo.findByProductIdOrderByCreatedAtAsc(
+                productId,
+                PageRequest.of(page, size)
+        );
     }
 
     @Transactional

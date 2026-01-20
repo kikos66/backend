@@ -1,5 +1,7 @@
 package com.stary.backend.api.products;
 
+
+import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -68,15 +70,17 @@ public class ProductController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Product>> getAll(
+    public ResponseEntity<Page<Product>> getAll(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String condition,
             @RequestParam(required = false) Double minPrice,
-            @RequestParam(required = false) Double maxPrice
+            @RequestParam(required = false) Double maxPrice,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "9") int size
     ) {
         return ResponseEntity.ok(
-                svc.searchFiltered(search, category, condition, minPrice, maxPrice)
+                svc.searchFilteredPaged(search, category, condition, minPrice, maxPrice, page, size)
         );
     }
 

@@ -1,5 +1,6 @@
 package com.stary.backend.api.comments;
 
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,8 +13,10 @@ public class CommentController {
     public CommentController(CommentService svc) { this.svc = svc; }
 
     @GetMapping("/products/{productId}/comments")
-    public List<Comment> getComments(@PathVariable Long productId) {
-        return svc.listForProduct(productId);
+    public Page<Comment> getComments(@PathVariable Long productId,
+                                     @RequestParam(defaultValue = "0") int page,
+                                     @RequestParam(defaultValue = "2") int size) {
+        return svc.listForProductPaged(productId, page, size);
     }
 
     @PostMapping("/products/{productId}/comments")
