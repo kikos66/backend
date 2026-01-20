@@ -164,7 +164,7 @@ public class ProductService {
 
         Path productsDir = rootUploadPath.resolve("products");
         if (product.getImages() != null) {
-            for (var img : product.getImages()) {
+            for (ProductImage img : product.getImages()) {
                 try {
                     Path file = productsDir.resolve(img.getFilename());
                     Files.deleteIfExists(file);

@@ -1,5 +1,6 @@
 package com.stary.backend.api.service;
 
+import com.stary.backend.api.comments.CommentRepository;
 import com.stary.backend.api.model.EditRequest;
 import com.stary.backend.api.products.Product;
 import com.stary.backend.api.products.ProductImage;
@@ -10,8 +11,10 @@ import com.stary.backend.api.model.RegisterRequest;
 import com.stary.backend.api.users.repositories.RefreshTokenRepository;
 import com.stary.backend.api.users.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import com.stary.backend.api.users.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -37,9 +40,10 @@ public class UserService {
     private static final Pattern PATTERN = Pattern.compile(EMAIL_REGEX);
     private final Path rootUploadPath;
     private final ProductRepository productRepository;
+    private final CommentRepository commentRepository;
 
     public UserService(UserRepository userRepository, RefreshTokenRepository refreshTokenRepository,
-                       PasswordEncoder passwordEncoder, TokenManager tokenManager, @Value("${file.upload-dir}") String uploadDir, ProductRepository productRepository) throws IOException {
+                       PasswordEncoder passwordEncoder, TokenManager tokenManager, @Value("${file.upload-dir}") String uploadDir, ProductRepository productRepository, CommentRepository commentRepository) throws IOException {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.refreshTokenRepository = refreshTokenRepository;
@@ -48,6 +52,7 @@ public class UserService {
         this.rootUploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
         Files.createDirectories(rootUploadPath.resolve("profiles"));
         this.productRepository = productRepository;
+        this.commentRepository = commentRepository;
     }
 
     @Transactional
@@ -139,6 +144,7 @@ public class UserService {
 
         List<Product> products = productRepository.findByOwnerId(user.getId());
         for (Product product : products) {
+            commentRepository.deleteByProductId(product.getId());
             deleteProductFiles(product);
             productRepository.delete(product);
         }
@@ -183,4 +189,23 @@ public class UserService {
 
         return filename;
     }
+
+    //admin role giver
+    /*@Component
+    public class AdminSeeder implements CommandLineRunner {
+
+        private final UserRepository userRepository;
+
+        public AdminSeeder(UserRepository userRepository) {
+            this.userRepository = userRepository;
+        }
+
+        @Override
+        public void run(String... args) {
+            userRepository.findByEmail("admin@admin.com").ifPresent(user -> {
+                user.setRole(Role.ROLE_ADMIN);
+                userRepository.save(user);
+            });
+        }
+    }*/
 }
