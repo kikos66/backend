@@ -102,6 +102,10 @@ public class ProductService {
         return productRepository.findById(id);
     }
 
+    public List<Product> findByUserId(Long userId) {
+        return productRepository.findByOwnerId(userId);
+    }
+
     public List<Product> findAll() {
         return productRepository.findAll();
     }

@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import com.stary.backend.api.users.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.multipart.MultipartFile;
+import com.stary.backend.api.reviews.ReviewRepository;
 
 import java.io.IOException;
 import java.nio.file.*;
@@ -41,9 +42,12 @@ public class UserService {
     private final Path rootUploadPath;
     private final ProductRepository productRepository;
     private final CommentRepository commentRepository;
+    private final ReviewRepository reviewRepository;
 
     public UserService(UserRepository userRepository, RefreshTokenRepository refreshTokenRepository,
-                       PasswordEncoder passwordEncoder, TokenManager tokenManager, @Value("${file.upload-dir}") String uploadDir, ProductRepository productRepository, CommentRepository commentRepository) throws IOException {
+                       PasswordEncoder passwordEncoder, TokenManager tokenManager,
+                       @Value("${file.upload-dir}") String uploadDir, ProductRepository productRepository,
+                       CommentRepository commentRepository, ReviewRepository reviewRepository) throws IOException {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.refreshTokenRepository = refreshTokenRepository;
@@ -53,6 +57,7 @@ public class UserService {
         Files.createDirectories(rootUploadPath.resolve("profiles"));
         this.productRepository = productRepository;
         this.commentRepository = commentRepository;
+        this.reviewRepository = reviewRepository;
     }
 
     @Transactional
@@ -148,6 +153,9 @@ public class UserService {
             deleteProductFiles(product);
             productRepository.delete(product);
         }
+
+        reviewRepository.deleteByAuthorId(user.getId());
+        reviewRepository.deleteByTargetId(user.getId());
 
         deleteProfileFile(user);
         deleteRefreshTokensForUser(user);

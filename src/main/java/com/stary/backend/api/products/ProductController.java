@@ -79,7 +79,7 @@ public class ProductController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "9") int size
     ) {
-        return ResponseEntity.ok(
+        return ResponseEntity.ok(   
                 svc.searchFilteredPaged(search, category, condition, minPrice, maxPrice, page, size)
         );
     }
@@ -107,5 +107,10 @@ public class ProductController {
     @GetMapping("/mine")
     public ResponseEntity<List<Product>> myProducts() {
         return ResponseEntity.ok(svc.findMine());
+    }
+
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<Product>> productsByUser(@PathVariable Long userId) {
+        return ResponseEntity.ok(svc.findByUserId(userId));
     }
 }
