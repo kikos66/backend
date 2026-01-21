@@ -8,4 +8,6 @@ import lombok.Setter;
 @Getter
 public class EditRequest {
     private String email;
+    private String username;
+    private String password;
 }

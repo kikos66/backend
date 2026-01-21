@@ -108,21 +108,43 @@ public class UserService {
         return refreshTokenRepository.save(rt);
     }
 
+    @Transactional
     public boolean edit(Long id, EditRequest req) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found."));
 
-        if (!user.getEmail().equals(req.getEmail())) {
+        boolean updated = false;
+
+        if (req.getEmail() != null && !req.getEmail().equals(user.getEmail()) &&
+                PATTERN.matcher(req.getEmail()).matches()) {
             if (userRepository.findByEmail(req.getEmail()).isPresent()) {
-                //throw new BadCredentialsException("Email is already in use.");
-                return false;
+                throw new IllegalStateException("Email is already in use.");
             }
             user.setEmail(req.getEmail());
-        } else {
-            return false;
+            updated = true;
         }
-        userRepository.save(user);
-        return true;
+
+        if (req.getUsername() != null && !req.getUsername().equals(user.getUsername())
+                && !req.getUsername().isEmpty()) {
+            if (userRepository.existsByUsername(req.getUsername())) {
+                throw new IllegalStateException("Username is already taken.");
+            }
+            user.setUsername(req.getUsername());
+            updated = true;
+        }
+
+        if (req.getPassword() != null && !req.getPassword().isEmpty()) {
+            String encoded = passwordEncoder.encode(req.getPassword());
+            user.setPassword(encoded);
+            updated = true;
+        }
+
+        if (updated) {
+            userRepository.save(user);
+            return true;
+        }
+
+        return false; // nothing changed
     }
 
     public void deleteProfileFile(User user) {
