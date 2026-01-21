@@ -34,6 +34,9 @@ public class Product {
     @Column(name = "product_condition")
     private String condition; // new | used | refurbished
 
+    @Column(name = "quantity", nullable = false)
+    private Integer quantity = 1; // number in stock, default 1
+
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JsonManagedReference
     private List<ProductImage> images = new ArrayList<>();

@@ -33,6 +33,7 @@ public class ProductController {
             @RequestParam Double price,
             @RequestParam String category,
             @RequestParam String condition,
+            @RequestParam(required = false) Integer quantity,
             @RequestPart(required = false) MultipartFile[] images
     ) {
         try{
@@ -42,6 +43,7 @@ public class ProductController {
             p.setPrice(price);
             p.setCategory(category);
             p.setCondition(condition);
+            p.setQuantity(quantity == null ? 1 : quantity);
 
             Product saved = svc.createProduct(p, images);
             return ResponseEntity.status(201).body(saved);

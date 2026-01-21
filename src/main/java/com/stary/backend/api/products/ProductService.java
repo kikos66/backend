@@ -216,4 +216,17 @@ public class ProductService {
         User user = getAuthenticatedUser();
         return productRepository.findByOwnerId(user.getId());
     }
+
+    @Transactional
+    public void reduceStock(Long productId, int amount) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new NoSuchElementException("Product not found: " + productId));
+
+        Integer current = product.getQuantity() == null ? 0 : product.getQuantity();
+        if (current < amount) {
+            throw new IllegalArgumentException("Not enough stock for product " + product.getName());
+        }
+        product.setQuantity(current - amount);
+        productRepository.save(product);
+    }
 }
