@@ -1,5 +1,6 @@
 package com.stary.backend.api.products;
 
+import com.stary.backend.api.comments.CommentRepository;
 import com.stary.backend.api.products.repositories.ProductImageRepository;
 import com.stary.backend.api.products.repositories.ProductRepository;
 import com.stary.backend.api.users.User;
@@ -29,17 +30,19 @@ public class ProductService {
     private static final Set<String> ALLOWED = Set.of("image/png","image/jpeg","image/webp");
     private static final long MAX_BYTES = 5L * 1024 * 1024; // 5 MB
     private static final int MAX_IMAGES_PER_PRODUCT = 5;
+    private final CommentRepository commentRepository;
 
     public ProductService(ProductRepository productRepository,
                           ProductImageRepository imageRepository,
                           UserRepository userRepository,
-                          @Value("${file.upload-dir}") String uploadDir) throws IOException {
+                          @Value("${file.upload-dir}") String uploadDir, CommentRepository commentRepository) throws IOException {
         this.productRepository = productRepository;
         this.imageRepository = imageRepository;
         this.userRepository = userRepository;
         this.rootUploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
         Files.createDirectories(rootUploadPath.resolve("products"));
         Files.createDirectories(rootUploadPath.resolve("profiles"));
+        this.commentRepository = commentRepository;
     }
 
     @Transactional
@@ -202,6 +205,7 @@ public class ProductService {
             }
         }
 
+        commentRepository.deleteByProductId(productId);
         productRepository.delete(product);
     }
 

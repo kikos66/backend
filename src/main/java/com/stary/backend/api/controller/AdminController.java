@@ -1,5 +1,6 @@
 package com.stary.backend.api.controller;
 
+import com.stary.backend.api.service.UserService;
 import com.stary.backend.api.users.Role;
 import com.stary.backend.api.users.User;
 import com.stary.backend.api.users.repositories.UserRepository;
@@ -15,9 +16,11 @@ import java.util.Optional;
 public class AdminController {
 
     private final UserRepository userRepository;
+    private final UserService userService;
 
-    public AdminController(UserRepository userRepository) {
+    public AdminController(UserRepository userRepository, UserService userService) {
         this.userRepository = userRepository;
+        this.userService = userService;
     }
 
     @PreAuthorize("hasRole('ADMIN')")
@@ -35,5 +38,17 @@ public class AdminController {
     @GetMapping("/users")
     public ResponseEntity<?> getAllUsers() {
         return ResponseEntity.ok(userRepository.findAll());
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/users/{id}")
+    public ResponseEntity<?> deleteUser(@PathVariable Long id) {
+        return userRepository.findById(id)
+                .map(user -> {
+                    userService.deleteUser(user.getId());
+                    userRepository.delete(user);
+                    return ResponseEntity.ok().build();
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 }

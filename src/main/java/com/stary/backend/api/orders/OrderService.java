@@ -1,5 +1,7 @@
 package com.stary.backend.api.orders;
 
+import com.stary.backend.api.orders.repositories.OrderItemRepository;
+import com.stary.backend.api.orders.repositories.PurchaseOrderRepository;
 import com.stary.backend.api.products.Product;
 import com.stary.backend.api.products.repositories.ProductRepository;
 import com.stary.backend.api.products.ProductService;
@@ -10,6 +12,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.*;
 
 @Service
@@ -17,13 +20,19 @@ public class OrderService {
     private final ProductRepository productRepository;
     private final ProductService productService;
     private final UserRepository userRepository;
+    private final PurchaseOrderRepository orderRepository;
+    private final OrderItemRepository orderItemRepository;
 
     public OrderService(ProductRepository productRepository,
                         ProductService productService,
-                        UserRepository userRepository) {
+                        UserRepository userRepository,
+                        PurchaseOrderRepository orderRepository,
+                        OrderItemRepository orderItemRepository) {
         this.productRepository = productRepository;
         this.productService = productService;
         this.userRepository = userRepository;
+        this.orderRepository = orderRepository;
+        this.orderItemRepository = orderItemRepository;
     }
 
     @Transactional
@@ -34,13 +43,11 @@ public class OrderService {
         }
         User buyer = userRepository.findByEmail(auth.getName()).orElseThrow();
 
+        // aggregate product quantities
         Map<Long, Integer> aggregated = new HashMap<>();
         for (CartItemDTO it : items) {
             aggregated.merge(it.getProductId(), it.getQuantity(), Integer::sum);
         }
-
-        List<Map<String, Object>> resultItems = new ArrayList<>();
-        double total = 0.0;
 
         // Validate stock first
         for (Map.Entry<Long, Integer> e : aggregated.entrySet()) {
@@ -56,31 +63,69 @@ public class OrderService {
             }
         }
 
-        // All good -> decrement
+        PurchaseOrder order = new PurchaseOrder();
+        order.setBuyer(buyer);
+        order.setCreatedAt(Instant.now());
+
+        double total = 0.0;
+        List<Map<String, Object>> resultItems = new ArrayList<>();
+
         for (Map.Entry<Long, Integer> e : aggregated.entrySet()) {
             Long pid = e.getKey();
             int qty = e.getValue();
+
             Product p = productRepository.findById(pid).orElseThrow();
+            // reduce stock (existing productService method)
             productService.reduceStock(pid, qty);
 
             double price = p.getPrice() == null ? 0.0 : p.getPrice();
             double subtotal = price * qty;
             total += subtotal;
 
-            Map<String, Object> item = new HashMap<>();
-            item.put("productId", pid);
-            item.put("name", p.getName());
-            item.put("quantity", qty);
-            item.put("price", price);
-            item.put("subtotal", subtotal);
-            resultItems.add(item);
+            // create persistent OrderItem
+            OrderItem oi = new OrderItem();
+            oi.setOrder(order);
+            oi.setProductId(p.getId());
+            oi.setProductName(p.getName());
+            oi.setProductPrice(price);
+            oi.setQuantity(qty);
+            oi.setSubtotal(subtotal);
+            if (p.getOwner() != null) {
+                oi.setProductOwnerId(p.getOwner().getId());
+                oi.setProductOwnerName(p.getOwner().getUsername());
+            }
+            order.getItems().add(oi);
         }
 
+        order.setTotal(total);
+        PurchaseOrder saved = orderRepository.save(order);
+        // order items saved via cascade
+
+        // Build response DTO (same shape you used before)
         OrderSummaryDTO summary = new OrderSummaryDTO();
         summary.setTotal(total);
-        summary.setItems(resultItems);
-        summary.setMessage("Purchase simulated — stock updated. Thank you!");
+
+        List<Map<String, Object>> itemsForDto = new ArrayList<>();
+        for (OrderItem oi : saved.getItems()) {
+            Map<String, Object> m = new HashMap<>();
+            m.put("productId", oi.getProductId());
+            m.put("name", oi.getProductName());
+            m.put("quantity", oi.getQuantity());
+            m.put("price", oi.getProductPrice());
+            m.put("subtotal", oi.getSubtotal());
+            itemsForDto.add(m);
+        }
+        summary.setItems(itemsForDto);
+        summary.setMessage("Purchase simulated — stock updated and order saved. Thank you!");
 
         return summary;
+    }
+
+    public List<PurchaseOrder> findOrdersForBuyer(Long buyerId) {
+        return orderRepository.findByBuyerIdOrderByCreatedAtDesc(buyerId);
+    }
+
+    public List<PurchaseOrder> findSalesForSeller(Long sellerId) {
+        return orderRepository.findSalesForSeller(sellerId);
     }
 }

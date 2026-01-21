@@ -2,6 +2,8 @@ package com.stary.backend.api.service;
 
 import com.stary.backend.api.comments.CommentRepository;
 import com.stary.backend.api.model.EditRequest;
+import com.stary.backend.api.orders.repositories.OrderItemRepository;
+import com.stary.backend.api.orders.repositories.PurchaseOrderRepository;
 import com.stary.backend.api.products.Product;
 import com.stary.backend.api.products.ProductImage;
 import com.stary.backend.api.products.repositories.ProductRepository;
@@ -10,6 +12,7 @@ import com.stary.backend.api.model.LoginRequest;
 import com.stary.backend.api.model.RegisterRequest;
 import com.stary.backend.api.users.repositories.RefreshTokenRepository;
 import com.stary.backend.api.users.repositories.UserRepository;
+import org.hibernate.query.Order;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -43,11 +46,14 @@ public class UserService {
     private final ProductRepository productRepository;
     private final CommentRepository commentRepository;
     private final ReviewRepository reviewRepository;
+    private final PurchaseOrderRepository purchaseOrderRepository;
+    private final OrderItemRepository orderItemRepository;
 
     public UserService(UserRepository userRepository, RefreshTokenRepository refreshTokenRepository,
                        PasswordEncoder passwordEncoder, TokenManager tokenManager,
                        @Value("${file.upload-dir}") String uploadDir, ProductRepository productRepository,
-                       CommentRepository commentRepository, ReviewRepository reviewRepository) throws IOException {
+                       CommentRepository commentRepository, ReviewRepository reviewRepository,
+                       PurchaseOrderRepository purchaseOrderRepository, OrderItemRepository orderItemRepository) throws IOException {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.refreshTokenRepository = refreshTokenRepository;
@@ -58,6 +64,8 @@ public class UserService {
         this.productRepository = productRepository;
         this.commentRepository = commentRepository;
         this.reviewRepository = reviewRepository;
+        this.purchaseOrderRepository = purchaseOrderRepository;
+        this.orderItemRepository = orderItemRepository;
     }
 
     @Transactional
@@ -146,6 +154,9 @@ public class UserService {
     public boolean deleteUser(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found."));
+
+        orderItemRepository.deleteItemsByBuyerId(user.getId());
+        purchaseOrderRepository.deleteByBuyerId(user.getId());
 
         List<Product> products = productRepository.findByOwnerId(user.getId());
         for (Product product : products) {

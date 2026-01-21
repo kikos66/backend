@@ -67,6 +67,7 @@ public class CommentService {
             throw new SecurityException("Not allowed");
         }
         repo.delete(c);
+        repo.flush();
     }
 
     private User getAuthenticatedUser() {
